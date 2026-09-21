@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark"><meta name="theme-color" content="#0a5ea8">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="ATPL過去問"><meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" href="icon-192.png">
+<title>ATPL 過去問ドリル</title>
+<style>
+html{-webkit-tap-highlight-color:transparent}body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+:root{
+  --bg:#f1f4f7; --surface:#ffffff; --ink:#132030; --muted:#5a6a7a; --line:#d8dfe6; --soft:#e7edf2;
+  --accent:#0a5ea8; --accent-ink:#ffffff; --accent-soft:#dcebf8;
+  --ok:#17825a; --ok-soft:#dff3ea; --ng:#c23b3b; --ng-soft:#fbe4e2; --warn:#a86b00; --warn-soft:#fbefd5;
+  --img-filter:none;
+  --font:'IBM Plex Sans JP','Hiragino Sans','Noto Sans JP','Yu Gothic',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d141b; --surface:#151f29; --ink:#e5ecf2; --muted:#8fa1b3; --line:#27353f; --soft:#1e2b36;
+    --accent:#5cb0f2; --accent-ink:#06121c; --accent-soft:#17324a;
+    --ok:#4cc48c; --ok-soft:#153a2b; --ng:#f2786f; --ng-soft:#432022; --warn:#e3a94a; --warn-soft:#3b2d12;
+    --img-filter:invert(.9) hue-rotate(180deg);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d141b; --surface:#151f29; --ink:#e5ecf2; --muted:#8fa1b3; --line:#27353f; --soft:#1e2b36;
+  --accent:#5cb0f2; --accent-ink:#06121c; --accent-soft:#17324a;
+  --ok:#4cc48c; --ok-soft:#153a2b; --ng:#f2786f; --ng-soft:#432022; --warn:#e3a94a; --warn-soft:#3b2d12;
+  --img-filter:invert(.9) hue-rotate(180deg);
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.7;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:720px;margin:0 auto;padding-inline:16px;padding-block:20px 132px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+h1,h2,h3{text-wrap:balance;margin:0}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px}
+.top>div:first-child{flex:1 1 100%}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:26px;line-height:1.25;font-weight:600;margin-top:2px;word-break:keep-all}
+.sub{color:var(--muted);font-size:14px;margin:4px 0 0}
+.roundchip{font-family:var(--mono);font-size:13px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;white-space:nowrap}
+select.roundchip{appearance:none;padding-right:12px}
+
+.strip{display:grid;grid-template-columns:repeat(3,1fr);margin:22px 0 18px;border-block:1px solid var(--line)}
+.strip div{padding:12px 0 12px 14px;border-left:1px solid var(--line)}
+.strip div:first-child{border-left:0;padding-left:0}
+.strip b{display:block;font-family:var(--mono);font-size:24px;font-weight:500;line-height:1.2}
+.strip span{font-size:12px;color:var(--muted)}
+
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:26px}
+.btn{min-height:48px;border-radius:10px;border:1px solid var(--line);background:var(--surface);padding:10px 14px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent}
+.btn[disabled]{opacity:.45;cursor:default}
+.btn small{font-family:var(--mono);font-size:12px;opacity:.85}
+
+.sec{font-size:13px;font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+.subj{padding:16px 0;border-top:1px solid var(--line)}
+.subj:last-child{border-bottom:1px solid var(--line)}
+.subj-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.subj-head h3{font-size:18px;font-weight:600}
+.subj-head .meta{font-size:13px;color:var(--muted);font-family:var(--mono)}
+.bar{position:relative;height:8px;background:var(--soft);border-radius:4px;margin:10px 0 6px;overflow:visible}
+.bar i{position:absolute;left:0;top:0;height:100%;border-radius:4px;display:block}
+.bar .a{background:var(--accent-soft)}
+.bar .c{background:var(--ok)}
+.bar u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);opacity:.55;text-decoration:none}
+.barnote{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-family:var(--mono)}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.trio .btn{min-height:44px;font-size:14px;padding:8px}
+
+/* tabs */
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+.tabs button{flex:1;border:0;background:none;padding:12px 8px;font-size:14px;color:var(--muted);font-weight:500;min-height:52px}
+.tabs button[aria-current="page"]{color:var(--accent)}
+.tabs button[aria-current="page"]::after{content:"";display:block;height:2px;width:28px;background:var(--accent);margin:4px auto -6px;border-radius:2px}
+
+/* quiz */
+.qtop{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:4;margin-inline:-16px;padding:10px 16px 8px;border-bottom:1px solid var(--line)}
+.qbar{display:flex;align-items:center;gap:10px}
+.qbar .back{border:0;background:none;padding:6px 8px 6px 0;color:var(--muted);font-size:14px;min-height:40px}
+.qbar .ttl{flex:1;font-weight:600;font-size:15px;line-height:1.3}
+.qbar .cnt{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.prog{height:3px;background:var(--soft);border-radius:2px;margin-top:8px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--accent)}
+.code{font-family:var(--mono);font-size:12px;color:var(--muted);margin:18px 0 8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:1px 9px;font-size:12px;background:var(--surface)}
+.pill.warn{border-color:var(--warn);color:var(--warn);background:var(--warn-soft)}
+.stem p{margin:0 0 .5em}
+.stem p.stmt{padding-left:1.6em;text-indent:-1.6em}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-size:13px;min-height:36px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.chip.star[aria-pressed="true"]{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.panel{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:14px 14px 4px;margin:10px 0;font-size:14px;line-height:1.65}
+.panel dl{margin:0}
+.panel dt{font-weight:600;font-size:13px;color:var(--muted)}
+.panel dd{margin:0 0 10px}
+.panel .lead{margin:0 0 12px}
+.fig{margin:12px 0;border:1px solid var(--line);border-radius:10px;overflow:auto;background:#fff}
+.fig img{display:block;width:100%;height:auto;filter:var(--img-filter);background:#fff}
+.choices{display:grid;gap:10px;margin:18px 0}
+.choice{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-height:52px;line-height:1.55}
+.choice .n{flex:none;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-family:var(--mono);font-size:13px;margin-top:1px}
+.choice.ok{border-color:var(--ok);background:var(--ok-soft)}
+.choice.ok .n{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.choice.ng{border-color:var(--ng);background:var(--ng-soft)}
+.choice.ng .n{background:var(--ng);border-color:var(--ng);color:var(--surface)}
+.choice.dim{opacity:.6}
+.result{display:flex;align-items:center;gap:10px;font-weight:600;margin:6px 0 10px}
+.result.ok{color:var(--ok)} .result.ng{color:var(--ng)}
+.explain{border-top:2px solid var(--line);padding-top:14px;margin-top:8px}
+.explain h3{font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.explain p{margin:0 0 .6em;font-size:15px}
+.disc{font-size:12px;color:var(--muted);margin-top:10px}
+.dock{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));z-index:6}
+.dock .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:auto 1fr;gap:10px}
+
+/* results / stats */
+.score{display:flex;align-items:baseline;gap:12px;margin:18px 0 4px}
+.score b{font-family:var(--mono);font-size:56px;font-weight:500;line-height:1}
+.score span{font-size:20px;color:var(--muted);font-family:var(--mono)}
+.verdict{display:inline-block;border-radius:6px;padding:2px 10px;font-size:13px;font-weight:600}
+.verdict.pass{background:var(--ok-soft);color:var(--ok)}
+.verdict.fail{background:var(--warn-soft);color:var(--warn)}
+.rows{margin:18px 0}
+.row{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.row:last-child{border-bottom:1px solid var(--line)}
+.row .m{flex:none;width:22px;text-align:center;font-family:var(--mono);font-weight:600}
+.row .m.ok{color:var(--ok)} .row .m.ng{color:var(--ng)} .row .m.sk{color:var(--muted)}
+.row .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .k{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.hist .row .t{white-space:normal}
+.tbl{overflow-x:auto}
+.note{font-size:13px;color:var(--muted);margin:10px 0}
+.danger{color:var(--ng);border-color:var(--ng)}
+
+/* viewer */
+.viewer{position:fixed;inset:0;background:var(--bg);z-index:20;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+.viewer header{display:flex;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.viewer header .chips{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.viewer .body{flex:1;overflow:auto;padding:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));background:var(--bg)}
+.viewer .body img{display:block;background:#fff;filter:var(--img-filter);max-width:none}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;z-index:30;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion:no-preference){.choice{transition:background .12s,border-color .12s}}
+@media (min-width:600px){h1{font-size:30px}}
+</style>
+
+</head><body>
+<div id="app"></div>
+<script src="data.js"></script>
+<script>
+(function(){
+"use strict";
+var DATA = window.ATPL_DATA;
+var LS_KEY = 'atpl-drill-v1';
+var progress = {v:1, q:{}, hist:[]};
+var store = {ref:null, mode:'pending', err:false};
+var S = {bk:null, tab:'home', screen:'home', round:DATA.rounds[0].id, sess:null, viewer:null, showImg:{}, preOpen:null};
+var $app = document.getElementById('app');
+
+function R(){ return DATA.rounds.filter(function(r){return r.id===S.round})[0] || DATA.rounds[0]; }
+function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function fmt(s){ return esc(s).replace(/C_D/g,'C<sub>D</sub>'); }
+function qid(sid,no){ return S.round+':'+sid+':'+no; }
+function subjById(id){ return R().subjects.filter(function(s){return s.id===id})[0]; }
+function qOf(sid,no){ return subjById(sid).q.filter(function(q){return q.no===no})[0]; }
+function pOf(sid,no){ return progress.q[qid(sid,no)] || null; }
+function needsReview(p){ return !!p && (p.ok===0 || p.s===1); }
+
+/* ---------- storage ---------- */
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function mergeP(a,b){
+  var out = {v:1, q:{}, hist:[]}; a = a||{}; b = b||{};
+  [a.q||{}, b.q||{}].forEach(function(m){
+    Object.keys(m).forEach(function(k){
+      var cur = out.q[k], nx = m[k];
+      if(!cur || (nx.t||0) >= (cur.t||0)) out.q[k] = nx;
+    });
+  });
+  var seen = {};
+  (a.hist||[]).concat(b.hist||[]).forEach(function(h){ if(!seen[h.id]){ seen[h.id]=1; out.hist.push(h); } });
+  out.hist.sort(function(x,y){return y.id-x.id}); out.hist = out.hist.slice(0,60);
+  return out;
+}
+function loadLocal(){ try{ var j = localStorage.getItem(LS_KEY); if(j) return JSON.parse(j); }catch(e){} return null; }
+function saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(progress)); }catch(e){} }
+var saving=false, again=false, timer=null;
+function touch(){ saveLocal(); clearTimeout(timer); timer = setTimeout(flush, 700); }
+function flush(){
+  if(!store.ref) return;
+  if(saving){ again = true; return; }
+  saving = true;
+  var body = clone(progress); body.u = Date.now();
+  store.ref.set(body).then(function(){ store.err=false; }, function(){ store.err=true; }).then(function(){
+    saving=false; if(again){ again=false; flush(); } else if(S.screen==='home'||S.tab==='stats') paintSaveState();
+  });
+}
+function paintSaveState(){ var el=document.getElementById('savestate'); if(el) el.textContent = saveText(); }
+function saveText(){
+  if(store.mode==='cloud') return store.err ? '同期に失敗（この端末には保存済み）' : '記録はアカウントに保存されます';
+  if(store.mode==='local') return '記録はこの端末に保存されます（別の端末とは共有されません）。ときどき「成績」画面でバックアップしてください';
+  return '保存先を確認中…';
+}
+function initStore(){
+  var local = loadLocal(); if(local) progress = mergeP(progress, local);
+  var c = null;
+  if(!c || !c.use){ store.mode='local'; render(); return; }
+  Promise.all([c.use('db'), c.use('user')]).then(function(r){
+    var db=r[0], user=r[1];
+    if(!db || !user) return null;
+    return Promise.resolve(user.id()).then(function(uid){
+      if(!uid) return null;
+      store.ref = db.doc('data/users/'+uid+'/progress');
+      return store.ref.get().then(function(snap){
+        if(snap.exists) progress = mergeP(progress, clone(snap.data()));
+        store.mode='cloud'; touch();
+      });
+    });
+  }).catch(function(){ store.ref=null; }).then(function(){
+    if(store.mode!=='cloud') store.mode='local';
+    if(!S.sess) render(); else paintSaveState();
+  });
+}
+
+/* ---------- offline status ---------- */
+var OFF = {text:'オフライン用の保存を確認中…'};
+function setOff(t){ OFF.text = t; var el = document.getElementById('offstate'); if(el) el.textContent = t; }
+function checkOffline(){
+  if(!('serviceWorker' in navigator) || !window.caches){ setOff('このブラウザではオフライン保存を使えません'); return; }
+  var tries = 0;
+  (function poll(){
+    caches.match('data.js').then(function(r){
+      if(r){ setOff('オフラインで使えます（保存済み）'); }
+      else if(++tries < 20) setTimeout(poll, 1500);
+      else setOff('オフライン用の保存が完了していません。ページを開き直してください');
+    }, function(){ setOff('オフライン用の保存を確認できません'); });
+  })();
+}
+if('serviceWorker' in navigator){ window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); checkOffline(); }); }
+else { OFF.text = 'このブラウザではオフライン保存を使えません'; }
+
+/* ---------- progress ops ---------- */
+function record(sid,no,ok){
+  var k = qid(sid,no), p = progress.q[k] || {a:0,c:0,w:0,ok:null,s:0,t:0};
+  p.a++; if(ok) p.c++; else p.w++;
+  p.ok = ok?1:0; p.t = Date.now(); progress.q[k] = p; touch();
+}
+function toggleStar(sid,no){
+  var k = qid(sid,no), p = progress.q[k] || {a:0,c:0,w:0,ok:null,s:0,t:0};
+  p.s = p.s ? 0 : 1; p.t = Date.now(); progress.q[k] = p; touch();
+}
+function subjStats(s){
+  var ans=0, ok=0, rev=0;
+  s.q.forEach(function(q){
+    var p = pOf(s.id,q.no);
+    if(p && p.a>0){ ans++; if(p.ok===1) ok++; }
+    if(needsReview(p)) rev++;
+  });
+  return {ans:ans, ok:ok, rev:rev, n:s.n};
+}
+function totals(){
+  var t = {ans:0, ok:0, rev:0, n:0};
+  R().subjects.forEach(function(s){ var x = subjStats(s); t.ans+=x.ans; t.ok+=x.ok; t.rev+=x.rev; t.n+=x.n; });
+  return t;
+}
+function pct(a,b){ return b ? Math.round(a*100/b) : 0; }
+
+/* ---------- sessions ---------- */
+function shuffle(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function pool(sid, kind){
+  var subs = sid ? [subjById(sid)] : R().subjects, list = [];
+  subs.forEach(function(s){ s.q.forEach(function(q){
+    if(kind==='wrong' && !needsReview(pOf(s.id,q.no))) return;
+    list.push({sid:s.id, no:q.no});
+  }); });
+  return kind==='seq' ? list : shuffle(list);
+}
+function start(sid, kind){
+  var list = pool(sid, kind);
+  if(!list.length){ toast('復習する問題はまだありません'); return; }
+  S.sess = {sid:sid, kind:kind, list:list, idx:0, done:{}, id:Date.now()};
+  S.screen = 'quiz'; S.showImg = {}; S.preOpen = null; S.viewer = null;
+  render(); window.scrollTo(0,0);
+}
+function cur(){ var e = S.sess.list[S.sess.idx]; return {ref:e, q:qOf(e.sid,e.no), s:subjById(e.sid)}; }
+function choose(i){
+  var se = S.sess; if(se.done[se.idx]) return;
+  var c = cur(), ok = (i === c.q.ans);
+  se.done[se.idx] = {pick:i, ok:ok};
+  record(c.ref.sid, c.ref.no, ok);
+  render();
+  requestAnimationFrame(function(){ var el = document.querySelector('.result'); if(el) el.scrollIntoView({block:'center',behavior:'smooth'}); });
+}
+function next(){
+  var se = S.sess;
+  if(se.idx < se.list.length-1){ se.idx++; S.preOpen=null; render(); window.scrollTo(0,0); }
+  else finish();
+}
+function prev(){ var se=S.sess; if(se.idx>0){ se.idx--; S.preOpen=null; render(); window.scrollTo(0,0);} }
+function finish(){
+  var se = S.sess, n = se.list.length, c = 0, a = 0;
+  Object.keys(se.done).forEach(function(k){ a++; if(se.done[k].ok) c++; });
+  if(a>0 && !se.saved){
+    se.saved = true;
+    progress.hist.unshift({id:se.id, t:Date.now(), sid:se.sid||'', kind:se.kind, n:n, a:a, c:c, r:S.round});
+    progress.hist = progress.hist.slice(0,60); touch();
+  }
+  S.screen = 'result'; render(); window.scrollTo(0,0);
+}
+function exitQuiz(){
+  var se = S.sess;
+  if(se && Object.keys(se.done).length && !se.saved) finish();
+  else { S.screen='home'; S.sess=null; render(); window.scrollTo(0,0); }
+}
+
+/* ---------- views ---------- */
+var KIND = {seq:'順番', rand:'ランダム', wrong:'復習'};
+function homeView(){
+  var r = R(), t = totals();
+  var h = '<div class="top"><div><div class="eyebrow">Airline Transport Pilot · Airplane</div><h1>ATPL 過去問ドリル</h1>'+
+    '<p class="sub">定期運送用操縦士（飛行機）学科試験</p></div>';
+  if(DATA.rounds.length>1){
+    h += '<select id="roundSel" class="roundchip" aria-label="実施回">'+DATA.rounds.map(function(x){return '<option value="'+x.id+'"'+(x.id===S.round?' selected':'')+'>'+esc(x.name)+'</option>';}).join('')+'</select>';
+  } else h += '<span class="roundchip">'+esc(r.name)+'</span>';
+  h += '</div>';
+  h += '<div class="strip"><div><b>'+t.ans+'<small style="font-size:14px;color:var(--muted)">/'+t.n+'</small></b><span>回答済み</span></div>'+
+       '<div><b>'+(t.ans?pct(t.ok,t.ans)+'%':'–')+'</b><span>正答率</span></div>'+
+       '<div><b>'+t.rev+'</b><span>要復習</span></div></div>';
+  h += '<div class="actions"><button class="btn primary" data-act="start" data-sid="" data-kind="rand">全科目ランダム</button>'+
+       '<button class="btn" data-act="start" data-sid="" data-kind="wrong"'+(t.rev?'':' disabled')+'>間違えた問題 <small>'+t.rev+'</small></button></div>';
+  h += '<p class="sec">科目別</p>';
+  r.subjects.forEach(function(s){
+    var x = subjStats(s);
+    h += '<section class="subj"><div class="subj-head"><h3>'+esc(s.name)+'</h3><span class="meta">'+s.n+'問・各'+s.pts+'点</span></div>'+
+      '<div class="bar" aria-hidden="true"><i class="a" style="width:'+pct(x.ans,x.n)+'%"></i><i class="c" style="width:'+pct(x.ok,x.n)+'%"></i><u style="left:70%"></u></div>'+
+      '<div class="barnote"><span>回答 '+x.ans+'/'+x.n+'　正答 '+x.ok+'</span><span>合格ライン 70%</span></div>'+
+      '<div class="trio"><button class="btn" data-act="start" data-sid="'+s.id+'" data-kind="seq">順番に</button>'+
+      '<button class="btn" data-act="start" data-sid="'+s.id+'" data-kind="rand">ランダム</button>'+
+      '<button class="btn" data-act="start" data-sid="'+s.id+'" data-kind="wrong"'+(x.rev?'':' disabled')+'>復習 <small>'+x.rev+'</small></button></div></section>';
+  });
+  h += '<p class="note">出典：国土交通省「航空従事者等学科試験解答及び過去問」'+esc(r.name)+'。解説はAIが作成した参考情報です。</p>';
+  h += '<p class="note" id="savestate">'+saveText()+'</p>';
+  h += '<p class="note" id="offstate">'+OFF.text+'</p>';
+  return h;
+}
+
+function statsView(){
+  var r = R(), t = totals(), h = '<div class="eyebrow">Progress</div><h1>成績</h1>';
+  h += '<div class="strip"><div><b>'+t.ans+'<small style="font-size:14px;color:var(--muted)">/'+t.n+'</small></b><span>回答済み</span></div>'+
+       '<div><b>'+(t.ans?pct(t.ok,t.ans)+'%':'–')+'</b><span>正答率</span></div><div><b>'+t.rev+'</b><span>要復習</span></div></div>';
+  h += '<p class="sec">科目ごとの正答率</p>';
+  r.subjects.forEach(function(s){
+    var x = subjStats(s), p = pct(x.ok,x.ans);
+    h += '<div class="subj"><div class="subj-head"><h3 style="font-size:16px">'+esc(s.name)+'</h3><span class="meta">'+(x.ans?p+'%':'未回答')+'</span></div>'+
+      '<div class="bar" aria-hidden="true"><i class="c" style="width:'+(x.ans?p:0)+'%"></i><u style="left:70%"></u></div>'+
+      '<div class="barnote"><span>正答 '+x.ok+' / 回答 '+x.ans+'（全'+x.n+'問）</span><span>70%</span></div></div>';
+  });
+  // weak questions
+  var weak = [];
+  r.subjects.forEach(function(s){ s.q.forEach(function(q){ var p=pOf(s.id,q.no); if(p && p.w>0) weak.push({sid:s.id,sn:s.name,no:q.no,w:p.w,a:p.a,ok:p.ok,stem:q.stem[0]}); }); });
+  weak.sort(function(a,b){return b.w-a.w || a.a-b.a}); weak = weak.slice(0,8);
+  h += '<p class="sec" style="margin-top:26px">よく間違える問題</p>';
+  if(!weak.length) h += '<p class="note">まだ間違えた問題はありません。</p>';
+  else { h += '<div class="rows">'; weak.forEach(function(w){
+    h += '<div class="row"><span class="m ng">×'+w.w+'</span><span class="t">'+esc(w.sn)+' 問'+w.no+'　'+esc(w.stem)+'</span><span class="k">'+(w.ok===1?'直近○':'直近×')+'</span></div>'; }); h += '</div>'; }
+  h += '<p class="sec" style="margin-top:26px">学習履歴</p>';
+  if(!progress.hist.length) h += '<p class="note">まだ履歴がありません。</p>';
+  else { h += '<div class="rows hist">'; progress.hist.slice(0,15).forEach(function(x){
+    var d = new Date(x.t), ds = (d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+    var sn = x.sid ? (function(){var s=subjById(x.sid);return s?s.name:x.sid;})() : '全科目';
+    h += '<div class="row"><span class="k" style="width:74px">'+ds+'</span><span class="t">'+esc(sn)+'・'+KIND[x.kind]+'</span><span class="mono">'+x.c+'/'+x.a+'</span></div>'; });
+    h += '</div>'; }
+  h += '<p class="note" id="savestate">'+saveText()+'</p>';
+  h += '<p class="sec" style="margin-top:26px">バックアップ</p><p class="note">記録の文字列をコピーしてメモなどに保管し、別の端末やブラウザで貼り付けて戻せます。</p>'+
+       '<div class="tools"><button class="chip" data-act="bk-export">記録を書き出す</button><button class="chip" data-act="bk-import">記録を読み込む</button></div>';
+  if(S.bk){
+    h += '<div class="panel" style="padding-bottom:14px"><p class="lead" style="margin-bottom:8px">'+(S.bk.mode==='export'?'下の文字列をすべてコピーして保管してください。':'書き出した文字列を貼り付けて「読み込む」を押してください。')+'</p>'+
+         '<textarea id="bkText" rows="6" style="width:100%;font-family:var(--mono);font-size:12px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" '+(S.bk.mode==='export'?'readonly':'')+'>'+esc(S.bk.text||'')+'</textarea>'+
+         '<div class="tools" style="margin-bottom:0">'+(S.bk.mode==='export'?'<button class="chip" data-act="bk-copy">コピー</button>':'<button class="chip" data-act="bk-do">読み込む</button>')+'<button class="chip" data-act="bk-close">閉じる</button></div></div>';
+  }
+  h += '<button class="btn ghost danger" data-act="reset" style="width:100%;margin-top:8px">成績をリセット</button>';
+  return h;
+}
+
+function figImg(src,alt){ return '<div class="fig"><img src="'+esc(src)+'" alt="'+esc(alt)+'" loading="lazy"></div>'; }
+var AUTO_IMG = {'P5-4':1,'P5-6':1,'P5-9':1,'P5-12':1};
+
+function quizView(){
+  var se = S.sess, c = cur(), q = c.q, dn = se.done[se.idx], n = se.list.length, r = R();
+  var key = c.ref.sid+'-'+c.ref.no;
+  var showImg = (key in S.showImg) ? S.showImg[key] : !!AUTO_IMG[key];
+  var group = (c.ref.sid==='P1' && c.ref.no>=16);
+  var preOpen = S.preOpen===null ? (c.ref.no===16) : S.preOpen;
+  var p = pOf(c.ref.sid,c.ref.no);
+  var h = '<div class="qtop"><div class="qbar"><button class="back" data-act="exit">← 終了</button><div class="ttl">'+esc(c.s.name)+'</div><div class="cnt">'+(se.idx+1)+' / '+n+'</div></div>'+
+          '<div class="prog"><i style="width:'+Math.round((se.idx+(dn?1:0))*100/n)+'%"></i></div></div>';
+  h += '<div class="code"><span>'+esc(r.short)+' · '+c.ref.sid+' · 問'+q.no+'</span>'+(needsReview(p)&&!dn?'<span class="pill warn">要復習</span>':'')+'<span class="pill">'+KIND[se.kind]+'</span></div>';
+  h += '<div class="stem">'+q.stem.map(function(l){ return '<p'+(/^\([a-e]\)|^[①-⑤]/.test(l)?' class="stmt"':'')+'>'+fmt(l)+'</p>'; }).join('')+'</div>';
+  h += '<div class="tools">';
+  if(group){
+    h += '<button class="chip" data-act="pre" aria-pressed="'+preOpen+'">飛行計画の条件</button>'+
+         '<button class="chip" data-act="att">航法DATA・ログ</button>';
+  }
+  h += '<button class="chip" data-act="img" aria-pressed="'+showImg+'">原文の画像</button>'+
+       '<button class="chip star" data-act="star" aria-pressed="'+(p&&p.s?'true':'false')+'">'+(p&&p.s?'★ 復習にマーク済み':'☆ 復習にマーク')+'</button></div>';
+  if(group && preOpen){
+    var pre = r.pre;
+    h += '<div class="panel"><p class="lead"><b>'+esc(pre.title)+'</b><br>'+esc(pre.intro)+'</p><dl>'+
+      pre.items.map(function(it){ return '<dt>'+esc(it[0])+'</dt><dd>'+esc(it[1])+'</dd>'; }).join('')+'</dl>'+
+      '<p class="note" style="margin-top:0"><button class="chip" data-act="preimg">原文の画像で確認</button></p></div>';
+  }
+  if(showImg) h += figImg(q.img, '問題の原文');
+  h += '<div class="choices" role="group" aria-label="選択肢">';
+  q.choices.forEach(function(ch,i){
+    var cls = 'choice', no = i+1;
+    if(dn){ if(no===q.ans) cls += ' ok'; else if(no===dn.pick) cls += ' ng'; else cls += ' dim'; }
+    h += '<button class="'+cls+'" data-act="choose" data-i="'+no+'"'+(dn?' disabled':'')+'><span class="n">'+no+'</span><span>'+fmt(ch)+'</span></button>';
+  });
+  h += '</div>';
+  if(dn){
+    h += '<div class="result '+(dn.ok?'ok':'ng')+'">'+(dn.ok?'正解':'不正解　正解は ('+q.ans+')')+'</div>';
+    h += '<div class="explain"><h3>解説 <span class="pill">AI作成</span> <span class="pill'+(q.conf==='h'?'':' warn')+'">'+(q.conf==='h'?'確度 高':'確度 中・要確認')+'</span></h3>'+
+      q.exp.split('\n').map(function(l){return '<p>'+fmt(l)+'</p>';}).join('')+
+      '<p class="disc">正解は国土交通省の公表解答によります。解説はAIが作成した参考情報で、法規・数値は最新の資料で確認してください。</p></div>';
+  }
+  var last = se.idx===n-1;
+  h += '<div class="dock"><div class="in">'+(se.idx>0?'<button class="btn" data-act="prev">前へ</button>':'<span></span>')+
+       '<button class="btn '+(dn?'primary':'')+'" data-act="next">'+(dn?(last?'結果を見る':'次の問題'):(last?'結果を見る':'スキップ'))+'</button></div></div>';
+  return h;
+}
+
+function resultView(){
+  var se = S.sess, n = se.list.length, ok = 0, ans = 0;
+  se.list.forEach(function(e,i){ var d = se.done[i]; if(d){ ans++; if(d.ok) ok++; } });
+  var p = pct(ok, ans), passed = p>=70;
+  var title = se.sid ? subjById(se.sid).name : '全科目';
+  var h = '<div class="eyebrow">Result</div><h1>'+esc(title)+'・'+KIND[se.kind]+'</h1>';
+  h += '<div class="score"><b>'+ok+'</b><span>/ '+ans+(ans<n?'（未回答 '+(n-ans)+'）':'')+'</span></div>';
+  h += '<p><span class="verdict '+(passed?'pass':'fail')+'">'+(ans?p+'%　'+(passed?'合格ライン（70%）以上':'合格ライン（70%）未満'):'回答なし')+'</span></p>';
+  h += '<div class="rows">';
+  se.list.forEach(function(e,i){
+    var d = se.done[i], q = qOf(e.sid,e.no), s = subjById(e.sid);
+    h += '<div class="row"><span class="m '+(d?(d.ok?'ok':'ng'):'sk')+'">'+(d?(d.ok?'○':'×'):'–')+'</span><span class="t">'+esc(s.name)+' 問'+e.no+'　'+esc(q.stem[0])+'</span>'+
+         '<span class="k">'+(d&&!d.ok?'正解 ('+q.ans+')':'')+'</span></div>';
+  });
+  h += '</div>';
+  var wrong = se.list.filter(function(e,i){ return se.done[i] && !se.done[i].ok; }).length;
+  h += '<div class="actions">'+
+       '<button class="btn primary" data-act="retry"'+(wrong?'':' disabled')+'>間違えた問題をもう一度 <small>'+wrong+'</small></button>'+
+       '<button class="btn" data-act="home">ホームへ</button></div>';
+  return h;
+}
+
+function viewerView(){
+  var v = S.viewer, r = R(), list = v.list;
+  var h = '<div class="viewer" role="dialog" aria-modal="true" aria-label="添付資料"><header><div class="chips">'+
+    list.map(function(a,i){ return '<button class="chip" data-act="vsel" data-i="'+i+'" aria-pressed="'+(i===v.i)+'">'+esc(a.name)+'</button>'; }).join('')+
+    '</div><button class="chip" data-act="vzoom" aria-pressed="'+v.zoom+'">拡大</button><button class="chip" data-act="vclose">閉じる</button></header>'+
+    '<div class="body"><img src="'+esc(list[v.i].img)+'" alt="'+esc(list[v.i].name)+'" style="width:'+(v.zoom?'220%':'100%')+'"></div></div>';
+  return h;
+}
+
+/* ---------- render ---------- */
+function render(){
+  var h = '';
+  if(S.screen==='quiz') h = quizView();
+  else if(S.screen==='result') h = resultView();
+  else h = S.tab==='stats' ? statsView() : homeView();
+  var tabs = '';
+  if(S.screen==='home'){
+    tabs = '<nav class="tabs" aria-label="メイン"><button data-act="tab" data-tab="home" '+(S.tab==='home'?'aria-current="page"':'')+'>ホーム</button>'+
+           '<button data-act="tab" data-tab="stats" '+(S.tab==='stats'?'aria-current="page"':'')+'>成績</button></nav>';
+  }
+  $app.innerHTML = '<div class="wrap">'+h+'</div>'+tabs+(S.viewer?viewerView():'');
+}
+var toastEl=null, toastT=null;
+function toast(msg){
+  if(toastEl) toastEl.remove();
+  toastEl = document.createElement('div'); toastEl.className='toast'; toastEl.setAttribute('role','status'); toastEl.textContent = msg;
+  document.body.appendChild(toastEl); clearTimeout(toastT); toastT = setTimeout(function(){ if(toastEl){toastEl.remove(); toastEl=null;} }, 2400);
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', function(e){
+  var b = e.target.closest('[data-act]'); if(!b || b.disabled) return;
+  var a = b.getAttribute('data-act');
+  if(a==='start') start(b.getAttribute('data-sid')||null, b.getAttribute('data-kind'));
+  else if(a==='tab'){ S.tab = b.getAttribute('data-tab'); render(); window.scrollTo(0,0); }
+  else if(a==='choose') choose(parseInt(b.getAttribute('data-i'),10));
+  else if(a==='next') next();
+  else if(a==='prev') prev();
+  else if(a==='exit') exitQuiz();
+  else if(a==='home'){ S.screen='home'; S.sess=null; render(); window.scrollTo(0,0); }
+  else if(a==='retry'){
+    var se = S.sess, list = se.list.filter(function(x,i){ return se.done[i] && !se.done[i].ok; });
+    S.sess = {sid:se.sid, kind:'wrong', list:shuffle(list), idx:0, done:{}, id:Date.now()};
+    S.screen='quiz'; S.showImg={}; S.preOpen=null; render(); window.scrollTo(0,0);
+  }
+  else if(a==='img'){ var c=cur(), k=c.ref.sid+'-'+c.ref.no; var was=(k in S.showImg)?S.showImg[k]:!!AUTO_IMG[k]; S.showImg[k]=!was; render(); }
+  else if(a==='star'){ var c2=cur(); toggleStar(c2.ref.sid,c2.ref.no); render(); }
+  else if(a==='pre'){ var cu = S.preOpen===null ? (cur().ref.no===16) : S.preOpen; S.preOpen = !cu; render(); }
+  else if(a==='preimg'){ S.viewer = {list:[{name:'飛行計画の条件（原文）', img:R().pre.img}], i:0, zoom:false}; render(); }
+  else if(a==='att'){ S.viewer = {list:R().att, i:0, zoom:false}; render(); }
+  else if(a==='vsel'){ S.viewer.i = parseInt(b.getAttribute('data-i'),10); render(); }
+  else if(a==='vzoom'){ S.viewer.zoom = !S.viewer.zoom; render(); }
+  else if(a==='vclose'){ S.viewer = null; render(); }
+  else if(a==='bk-export'){ S.bk = {mode:'export', text:JSON.stringify(progress)}; render(); }
+  else if(a==='bk-import'){ S.bk = {mode:'import', text:''}; render(); }
+  else if(a==='bk-close'){ S.bk = null; render(); }
+  else if(a==='bk-copy'){
+    var ta = document.getElementById('bkText'); ta.focus(); ta.select();
+    var ok = false; try{ ok = document.execCommand('copy'); }catch(x){}
+    if(!ok && navigator.clipboard){ navigator.clipboard.writeText(ta.value).then(function(){ toast('コピーしました'); }, function(){ toast('文字列を長押ししてコピーしてください'); }); }
+    else toast(ok ? 'コピーしました' : '文字列を長押ししてコピーしてください');
+  }
+  else if(a==='bk-do'){
+    var v = (document.getElementById('bkText').value||'').trim();
+    try{ var o = JSON.parse(v); if(!o || typeof o!=='object' || !o.q) throw 0; progress = mergeP(progress, o); touch(); S.bk = null; render(); toast('記録を読み込みました'); }
+    catch(x){ toast('読み込めませんでした。文字列をすべて貼り付けてください'); }
+  }
+  else if(a==='reset'){
+    if(window.confirm('回答の記録と履歴をすべて消します。よろしいですか？')){
+      progress = {v:1, q:{}, hist:[]}; try{ localStorage.removeItem(LS_KEY);}catch(x){}
+      if(store.ref){ store.ref.set({v:1,q:{},hist:[],u:Date.now()}).catch(function(){}); }
+      render(); toast('成績をリセットしました');
+    }
+  }
+});
+document.addEventListener('change', function(e){
+  if(e.target && e.target.id==='roundSel'){ S.round = e.target.value; render(); }
+});
+document.addEventListener('keydown', function(e){
+  if(S.screen!=='quiz' || S.viewer) return;
+  var tag = (e.target && e.target.tagName)||'';
+  if(tag==='SELECT' || tag==='INPUT') return;
+  var se = S.sess, dn = se.done[se.idx];
+  if(tag==='BUTTON' && (e.key==='Enter' || e.key===' ')) return;
+  if(/^[1-5]$/.test(e.key) && !dn){ var c = cur(); if(parseInt(e.key,10) <= c.q.choices.length) choose(parseInt(e.key,10)); }
+  else if((e.key==='Enter' || e.key==='ArrowRight') && dn){ e.preventDefault(); next(); }
+  else if(e.key==='ArrowLeft'){ prev(); }
+});
+
+render();
+initStore();
+})();
+</script>
+
+</body></html>
