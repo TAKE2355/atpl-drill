@@ -391,7 +391,8 @@ function homeView(){
     h += '<p class="note">全期間モードは、過去の試験で繰り返し出題された同一問題を1問にまとめています（初出の回の問題を表示）。空中航法の飛行計画問題（問16〜25）は回ごとに条件が異なるため、すべて含みます。回答の記録は、同じ問題であればどの回で解いても共通です。</p>';
     h += '<p class="note">出典：国土交通省「航空従事者等学科試験解答及び過去問」。解説はAIが作成した参考情報です。</p>';
   } else {
-    h += '<p class="note">出典：国土交通省「航空従事者等学科試験解答及び過去問」'+esc(meta(S.round).name)+'。解説はAIが作成した参考情報です。</p>';
+    var rd0 = ROUNDS[S.round];
+    h += '<p class="note">'+esc(rd0 && rd0.note ? rd0.note : '出典：国土交通省「航空従事者等学科試験解答及び過去問」'+meta(S.round).name+'。')+'解説はAIが作成した参考情報です。</p>';
   }
   h += '<p class="note" id="savestate">'+saveText()+'</p>';
   h += '<p class="note" id="offstate">'+OFF.text+'</p>';
@@ -445,7 +446,7 @@ function figImg(src,alt){ return '<div class="fig"><img src="'+esc(src)+'" alt="
 function quizView(){
   var se = S.sess, c = cur(), q = c.q, it = c.ref, dn = se.done[se.idx], n = se.list.length, rd = ROUNDS[it.r];
   var showImg = !!q.img && ((it.k in S.showImg) ? S.showImg[it.k] : !!q.fig);
-  var group = (it.sid==='P1' && it.no>=16);
+  var group = (it.sid==='P1' && it.no>=16 && !!(rd.pre || (rd.att && rd.att.length)));
   var preOpen = S.preOpen===null ? (it.no===16) : S.preOpen;
   var p = pOf(it);
   var h = '<div class="qtop"><div class="qbar"><button class="back" data-act="exit">← 終了</button><div class="ttl">'+esc(c.s.name)+'</div><div class="cnt">'+(se.idx+1)+' / '+n+'</div></div>'+
