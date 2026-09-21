@@ -152,24 +152,56 @@ select.roundchip{appearance:none;padding-right:12px}
 
 </head><body>
 <div id="app"></div>
-<script src="data.js"></script>
+<script src="data-index.js"></script>
 <script>
 (function(){
 "use strict";
-var DATA = window.ATPL_DATA;
+var INDEX = window.ATPL_INDEX;   /* [{id,name,short,n}] 新しい順 */
+var ROUNDS = {};                 /* 読み込み済みの回 */
+var ALLID = 'ALL';
 var LS_KEY = 'atpl-drill-v1';
 var progress = {v:1, q:{}, hist:[]};
 var store = {ref:null, mode:'pending', err:false};
-var S = {bk:null, tab:'home', screen:'home', round:DATA.rounds[0].id, sess:null, viewer:null, showImg:{}, preOpen:null};
+var S = {bk:null, tab:'home', screen:'home', round:INDEX[0].id, loading:true, sess:null, viewer:null, showImg:{}, preOpen:null};
 var $app = document.getElementById('app');
 
-function R(){ return DATA.rounds.filter(function(r){return r.id===S.round})[0] || DATA.rounds[0]; }
 function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
-function fmt(s){ return esc(s).replace(/C_D/g,'C<sub>D</sub>'); }
-function qid(sid,no){ return S.round+':'+sid+':'+no; }
-function subjById(id){ return R().subjects.filter(function(s){return s.id===id})[0]; }
-function qOf(sid,no){ return subjById(sid).q.filter(function(q){return q.no===no})[0]; }
-function pOf(sid,no){ return progress.q[qid(sid,no)] || null; }
+function fmt(s){ return esc(s).replace(/_\{([^}]*)\}/g,'<sub>$1</sub>').replace(/\^\{([^}]*)\}/g,'<sup>$1</sup>').replace(/C_D/g,'C<sub>D</sub>'); }
+function meta(id){ return INDEX.filter(function(x){return x.id===id})[0]; }
+function lookup(r){
+  var rd = ROUNDS[r];
+  if(!rd._m){ rd._m = {}; rd.subjects.forEach(function(s){ s.q.forEach(function(q){ rd._m[s.id+':'+q.no] = {q:q, s:s}; }); }); }
+  return rd._m;
+}
+function QS(it){ return lookup(it.r)[it.sid+':'+it.no]; }
+function pOf(it){ return progress.q[it.k] || null; }
+/* 出題範囲: 1つの回、または全期間（重複除く）。項目 = {r:回, sid:科目, no:問番号, k:記録キー} */
+var scopeCache = {};
+function buildScope(id){
+  var subs = {}, rounds = id===ALLID ? INDEX.map(function(x){return ROUNDS[x.id];}) : [ROUNDS[id]];
+  rounds.forEach(function(rd){
+    rd.subjects.forEach(function(s){
+      var o = subs[s.id]; if(!o) o = subs[s.id] = {id:s.id, name:s.name, pts:s.pts, items:[]};
+      s.q.forEach(function(q){
+        if(id===ALLID && q.d) return;
+        o.items.push({r:rd.id, sid:s.id, no:q.no, k:q.d || (rd.id+':'+s.id+':'+q.no)});
+      });
+    });
+  });
+  return ['P1','P4','P5','P6','P9'].filter(function(k){return subs[k];}).map(function(k){ var o=subs[k]; o.n=o.items.length; return o; });
+}
+function scope(){ if(!scopeCache[S.round]) scopeCache[S.round] = buildScope(S.round); return scopeCache[S.round]; }
+function loadRound(id, cb){
+  if(ROUNDS[id]){ cb(true); return; }
+  var s = document.createElement('script'); s.src = 'data-'+id+'.js';
+  s.onload = function(){ var d = (window.ATPL_R||{})[id]; if(d){ ROUNDS[id] = d; cb(true); } else cb(false); };
+  s.onerror = function(){ cb(false); };
+  document.head.appendChild(s);
+}
+function loadAll(cb){
+  var i = 0;
+  (function step(){ if(i>=INDEX.length){ cb(true); return; } loadRound(INDEX[i++].id, function(ok){ if(ok) step(); else cb(false); }); })();
+}
 function needsReview(p){ return !!p && (p.ok===0 || p.s===1); }
 
 /* ---------- storage ---------- */
@@ -234,7 +266,7 @@ function checkOffline(){
   if(!('serviceWorker' in navigator) || !window.caches){ setOff('このブラウザではオフライン保存を使えません'); return; }
   var tries = 0;
   (function poll(){
-    caches.match('data.js').then(function(r){
+    caches.match('data-H31-03.js').then(function(r){
       if(r){ setOff('オフラインで使えます（保存済み）'); }
       else if(++tries < 20) setTimeout(poll, 1500);
       else setOff('オフライン用の保存が完了していません。ページを開き直してください');
@@ -245,19 +277,19 @@ if('serviceWorker' in navigator){ window.addEventListener('load', function(){ na
 else { OFF.text = 'このブラウザではオフライン保存を使えません'; }
 
 /* ---------- progress ops ---------- */
-function record(sid,no,ok){
-  var k = qid(sid,no), p = progress.q[k] || {a:0,c:0,w:0,ok:null,s:0,t:0};
+function record(it,ok){
+  var p = progress.q[it.k] || {a:0,c:0,w:0,ok:null,s:0,t:0};
   p.a++; if(ok) p.c++; else p.w++;
-  p.ok = ok?1:0; p.t = Date.now(); progress.q[k] = p; touch();
+  p.ok = ok?1:0; p.t = Date.now(); progress.q[it.k] = p; touch();
 }
-function toggleStar(sid,no){
-  var k = qid(sid,no), p = progress.q[k] || {a:0,c:0,w:0,ok:null,s:0,t:0};
-  p.s = p.s ? 0 : 1; p.t = Date.now(); progress.q[k] = p; touch();
+function toggleStar(it){
+  var p = progress.q[it.k] || {a:0,c:0,w:0,ok:null,s:0,t:0};
+  p.s = p.s ? 0 : 1; p.t = Date.now(); progress.q[it.k] = p; touch();
 }
 function subjStats(s){
   var ans=0, ok=0, rev=0;
-  s.q.forEach(function(q){
-    var p = pOf(s.id,q.no);
+  s.items.forEach(function(it){
+    var p = pOf(it);
     if(p && p.a>0){ ans++; if(p.ok===1) ok++; }
     if(needsReview(p)) rev++;
   });
@@ -265,7 +297,7 @@ function subjStats(s){
 }
 function totals(){
   var t = {ans:0, ok:0, rev:0, n:0};
-  R().subjects.forEach(function(s){ var x = subjStats(s); t.ans+=x.ans; t.ok+=x.ok; t.rev+=x.rev; t.n+=x.n; });
+  scope().forEach(function(s){ var x = subjStats(s); t.ans+=x.ans; t.ok+=x.ok; t.rev+=x.rev; t.n+=x.n; });
   return t;
 }
 function pct(a,b){ return b ? Math.round(a*100/b) : 0; }
@@ -273,26 +305,30 @@ function pct(a,b){ return b ? Math.round(a*100/b) : 0; }
 /* ---------- sessions ---------- */
 function shuffle(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 function pool(sid, kind){
-  var subs = sid ? [subjById(sid)] : R().subjects, list = [];
-  subs.forEach(function(s){ s.q.forEach(function(q){
-    if(kind==='wrong' && !needsReview(pOf(s.id,q.no))) return;
-    list.push({sid:s.id, no:q.no});
-  }); });
+  var list = [];
+  scope().forEach(function(s){
+    if(sid && s.id!==sid) return;
+    s.items.forEach(function(it){
+      if(kind==='wrong' && !needsReview(pOf(it))) return;
+      list.push(it);
+    });
+  });
   return kind==='seq' ? list : shuffle(list);
 }
 function start(sid, kind){
+  if(S.loading) return;
   var list = pool(sid, kind);
   if(!list.length){ toast('復習する問題はまだありません'); return; }
   S.sess = {sid:sid, kind:kind, list:list, idx:0, done:{}, id:Date.now()};
   S.screen = 'quiz'; S.showImg = {}; S.preOpen = null; S.viewer = null;
   render(); window.scrollTo(0,0);
 }
-function cur(){ var e = S.sess.list[S.sess.idx]; return {ref:e, q:qOf(e.sid,e.no), s:subjById(e.sid)}; }
+function cur(){ var e = S.sess.list[S.sess.idx], x = QS(e); return {ref:e, q:x.q, s:x.s}; }
 function choose(i){
   var se = S.sess; if(se.done[se.idx]) return;
-  var c = cur(), ok = (i === c.q.ans);
+  var c = cur(), ok = (c.q.ans===0) || (i === c.q.ans) || !!(c.q.alt && c.q.alt.indexOf(i)>=0);
   se.done[se.idx] = {pick:i, ok:ok};
-  record(c.ref.sid, c.ref.no, ok);
+  record(c.ref, ok);
   render();
   requestAnimationFrame(function(){ var el = document.querySelector('.result'); if(el) el.scrollIntoView({block:'center',behavior:'smooth'}); });
 }
@@ -320,21 +356,29 @@ function exitQuiz(){
 
 /* ---------- views ---------- */
 var KIND = {seq:'順番', rand:'ランダム', wrong:'復習'};
+var SN = {P1:'空中航法', P4:'航空法規等', P5:'航空気象', P6:'航空工学', P9:'航空通信'};
+function shortOf(id){ if(id===ALLID) return '全期間'; var m = meta(id); return m ? m.short : id; }
+function roundSelect(){
+  var h = '<select id="roundSel" class="roundchip" aria-label="実施回">';
+  h += '<option value="'+ALLID+'"'+(S.round===ALLID?' selected':'')+'>全期間（重複問題を除く）</option>';
+  INDEX.forEach(function(x){ h += '<option value="'+x.id+'"'+(x.id===S.round?' selected':'')+'>'+esc(x.name)+'</option>'; });
+  return h + '</select>';
+}
+function homeHead(){
+  return '<div class="top"><div><div class="eyebrow">Airline Transport Pilot · Airplane</div><h1>ATPL 過去問ドリル</h1>'+
+    '<p class="sub">定期運送用操縦士（飛行機）学科試験</p></div>'+roundSelect()+'</div>';
+}
 function homeView(){
-  var r = R(), t = totals();
-  var h = '<div class="top"><div><div class="eyebrow">Airline Transport Pilot · Airplane</div><h1>ATPL 過去問ドリル</h1>'+
-    '<p class="sub">定期運送用操縦士（飛行機）学科試験</p></div>';
-  if(DATA.rounds.length>1){
-    h += '<select id="roundSel" class="roundchip" aria-label="実施回">'+DATA.rounds.map(function(x){return '<option value="'+x.id+'"'+(x.id===S.round?' selected':'')+'>'+esc(x.name)+'</option>';}).join('')+'</select>';
-  } else h += '<span class="roundchip">'+esc(r.name)+'</span>';
-  h += '</div>';
+  var h = homeHead();
+  if(S.loading){ return h + '<p class="note" style="margin-top:28px">問題データを読み込んでいます…</p>'; }
+  var t = totals();
   h += '<div class="strip"><div><b>'+t.ans+'<small style="font-size:14px;color:var(--muted)">/'+t.n+'</small></b><span>回答済み</span></div>'+
        '<div><b>'+(t.ans?pct(t.ok,t.ans)+'%':'–')+'</b><span>正答率</span></div>'+
        '<div><b>'+t.rev+'</b><span>要復習</span></div></div>';
   h += '<div class="actions"><button class="btn primary" data-act="start" data-sid="" data-kind="rand">全科目ランダム</button>'+
        '<button class="btn" data-act="start" data-sid="" data-kind="wrong"'+(t.rev?'':' disabled')+'>間違えた問題 <small>'+t.rev+'</small></button></div>';
   h += '<p class="sec">科目別</p>';
-  r.subjects.forEach(function(s){
+  scope().forEach(function(s){
     var x = subjStats(s);
     h += '<section class="subj"><div class="subj-head"><h3>'+esc(s.name)+'</h3><span class="meta">'+s.n+'問・各'+s.pts+'点</span></div>'+
       '<div class="bar" aria-hidden="true"><i class="a" style="width:'+pct(x.ans,x.n)+'%"></i><i class="c" style="width:'+pct(x.ok,x.n)+'%"></i><u style="left:70%"></u></div>'+
@@ -343,18 +387,26 @@ function homeView(){
       '<button class="btn" data-act="start" data-sid="'+s.id+'" data-kind="rand">ランダム</button>'+
       '<button class="btn" data-act="start" data-sid="'+s.id+'" data-kind="wrong"'+(x.rev?'':' disabled')+'>復習 <small>'+x.rev+'</small></button></div></section>';
   });
-  h += '<p class="note">出典：国土交通省「航空従事者等学科試験解答及び過去問」'+esc(r.name)+'。解説はAIが作成した参考情報です。</p>';
+  if(S.round===ALLID){
+    h += '<p class="note">全期間モードは、過去の試験で繰り返し出題された同一問題を1問にまとめています（初出の回の問題を表示）。空中航法の飛行計画問題（問16〜25）は回ごとに条件が異なるため、すべて含みます。回答の記録は、同じ問題であればどの回で解いても共通です。</p>';
+    h += '<p class="note">出典：国土交通省「航空従事者等学科試験解答及び過去問」。解説はAIが作成した参考情報です。</p>';
+  } else {
+    h += '<p class="note">出典：国土交通省「航空従事者等学科試験解答及び過去問」'+esc(meta(S.round).name)+'。解説はAIが作成した参考情報です。</p>';
+  }
   h += '<p class="note" id="savestate">'+saveText()+'</p>';
   h += '<p class="note" id="offstate">'+OFF.text+'</p>';
   return h;
 }
 
 function statsView(){
-  var r = R(), t = totals(), h = '<div class="eyebrow">Progress</div><h1>成績</h1>';
+  var h = '<div class="eyebrow">Progress</div><h1>成績</h1>';
+  if(S.loading) return h + '<p class="note">読み込み中…</p>';
+  var t = totals();
+  h += '<p class="note" style="margin:6px 0 0">対象：'+(S.round===ALLID?'全期間（重複問題を除く）':esc(meta(S.round).name))+'（ホームで切り替え）</p>';
   h += '<div class="strip"><div><b>'+t.ans+'<small style="font-size:14px;color:var(--muted)">/'+t.n+'</small></b><span>回答済み</span></div>'+
        '<div><b>'+(t.ans?pct(t.ok,t.ans)+'%':'–')+'</b><span>正答率</span></div><div><b>'+t.rev+'</b><span>要復習</span></div></div>';
   h += '<p class="sec">科目ごとの正答率</p>';
-  r.subjects.forEach(function(s){
+  scope().forEach(function(s){
     var x = subjStats(s), p = pct(x.ok,x.ans);
     h += '<div class="subj"><div class="subj-head"><h3 style="font-size:16px">'+esc(s.name)+'</h3><span class="meta">'+(x.ans?p+'%':'未回答')+'</span></div>'+
       '<div class="bar" aria-hidden="true"><i class="c" style="width:'+(x.ans?p:0)+'%"></i><u style="left:70%"></u></div>'+
@@ -362,18 +414,18 @@ function statsView(){
   });
   // weak questions
   var weak = [];
-  r.subjects.forEach(function(s){ s.q.forEach(function(q){ var p=pOf(s.id,q.no); if(p && p.w>0) weak.push({sid:s.id,sn:s.name,no:q.no,w:p.w,a:p.a,ok:p.ok,stem:q.stem[0]}); }); });
+  scope().forEach(function(s){ s.items.forEach(function(it){ var p=pOf(it); if(p && p.w>0){ var x=QS(it); weak.push({r:it.r,sn:s.name,no:it.no,w:p.w,a:p.a,ok:p.ok,stem:x.q.stem[0]}); } }); });
   weak.sort(function(a,b){return b.w-a.w || a.a-b.a}); weak = weak.slice(0,8);
   h += '<p class="sec" style="margin-top:26px">よく間違える問題</p>';
   if(!weak.length) h += '<p class="note">まだ間違えた問題はありません。</p>';
   else { h += '<div class="rows">'; weak.forEach(function(w){
-    h += '<div class="row"><span class="m ng">×'+w.w+'</span><span class="t">'+esc(w.sn)+' 問'+w.no+'　'+esc(w.stem)+'</span><span class="k">'+(w.ok===1?'直近○':'直近×')+'</span></div>'; }); h += '</div>'; }
+    h += '<div class="row"><span class="m ng">×'+w.w+'</span><span class="t">'+esc(w.sn)+' '+esc(shortOf(w.r))+' 問'+w.no+'　'+esc(w.stem)+'</span><span class="k">'+(w.ok===1?'直近○':'直近×')+'</span></div>'; }); h += '</div>'; }
   h += '<p class="sec" style="margin-top:26px">学習履歴</p>';
   if(!progress.hist.length) h += '<p class="note">まだ履歴がありません。</p>';
   else { h += '<div class="rows hist">'; progress.hist.slice(0,15).forEach(function(x){
     var d = new Date(x.t), ds = (d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
-    var sn = x.sid ? (function(){var s=subjById(x.sid);return s?s.name:x.sid;})() : '全科目';
-    h += '<div class="row"><span class="k" style="width:74px">'+ds+'</span><span class="t">'+esc(sn)+'・'+KIND[x.kind]+'</span><span class="mono">'+x.c+'/'+x.a+'</span></div>'; });
+    var sn = x.sid ? (SN[x.sid]||x.sid) : '全科目';
+    h += '<div class="row"><span class="k" style="width:74px">'+ds+'</span><span class="t">'+esc(shortOf(x.r||'R5-07'))+' '+esc(sn)+'・'+KIND[x.kind]+'</span><span class="mono">'+x.c+'/'+x.a+'</span></div>'; });
     h += '</div>'; }
   h += '<p class="note" id="savestate">'+saveText()+'</p>';
   h += '<p class="sec" style="margin-top:26px">バックアップ</p><p class="note">記録の文字列をコピーしてメモなどに保管し、別の端末やブラウザで貼り付けて戻せます。</p>'+
@@ -387,44 +439,49 @@ function statsView(){
   return h;
 }
 
+function ansText(q){ return q.alt ? [q.ans].concat(q.alt).sort().join(') または (') : String(q.ans); }
 function figImg(src,alt){ return '<div class="fig"><img src="'+esc(src)+'" alt="'+esc(alt)+'" loading="lazy"></div>'; }
-var AUTO_IMG = {'P5-4':1,'P5-6':1,'P5-9':1,'P5-12':1};
 
 function quizView(){
-  var se = S.sess, c = cur(), q = c.q, dn = se.done[se.idx], n = se.list.length, r = R();
-  var key = c.ref.sid+'-'+c.ref.no;
-  var showImg = (key in S.showImg) ? S.showImg[key] : !!AUTO_IMG[key];
-  var group = (c.ref.sid==='P1' && c.ref.no>=16);
-  var preOpen = S.preOpen===null ? (c.ref.no===16) : S.preOpen;
-  var p = pOf(c.ref.sid,c.ref.no);
+  var se = S.sess, c = cur(), q = c.q, it = c.ref, dn = se.done[se.idx], n = se.list.length, rd = ROUNDS[it.r];
+  var showImg = !!q.img && ((it.k in S.showImg) ? S.showImg[it.k] : !!q.fig);
+  var group = (it.sid==='P1' && it.no>=16);
+  var preOpen = S.preOpen===null ? (it.no===16) : S.preOpen;
+  var p = pOf(it);
   var h = '<div class="qtop"><div class="qbar"><button class="back" data-act="exit">← 終了</button><div class="ttl">'+esc(c.s.name)+'</div><div class="cnt">'+(se.idx+1)+' / '+n+'</div></div>'+
           '<div class="prog"><i style="width:'+Math.round((se.idx+(dn?1:0))*100/n)+'%"></i></div></div>';
-  h += '<div class="code"><span>'+esc(r.short)+' · '+c.ref.sid+' · 問'+q.no+'</span>'+(needsReview(p)&&!dn?'<span class="pill warn">要復習</span>':'')+'<span class="pill">'+KIND[se.kind]+'</span></div>';
+  h += '<div class="code"><span>'+esc(shortOf(it.r))+' · '+it.sid+' · 問'+q.no+'</span>'+(needsReview(p)&&!dn?'<span class="pill warn">要復習</span>':'')+'<span class="pill">'+KIND[se.kind]+'</span></div>';
   h += '<div class="stem">'+q.stem.map(function(l){ return '<p'+(/^\([a-e]\)|^[①-⑤]/.test(l)?' class="stmt"':'')+'>'+fmt(l)+'</p>'; }).join('')+'</div>';
   h += '<div class="tools">';
   if(group){
     h += '<button class="chip" data-act="pre" aria-pressed="'+preOpen+'">飛行計画の条件</button>'+
          '<button class="chip" data-act="att">航法DATA・ログ</button>';
   }
-  h += '<button class="chip" data-act="img" aria-pressed="'+showImg+'">原文の画像</button>'+
-       '<button class="chip star" data-act="star" aria-pressed="'+(p&&p.s?'true':'false')+'">'+(p&&p.s?'★ 復習にマーク済み':'☆ 復習にマーク')+'</button></div>';
+  if(q.img) h += '<button class="chip" data-act="img" aria-pressed="'+showImg+'">原文の画像</button>';
+  h += '<button class="chip star" data-act="star" aria-pressed="'+(p&&p.s?'true':'false')+'">'+(p&&p.s?'★ 復習にマーク済み':'☆ 復習にマーク')+'</button></div>';
   if(group && preOpen){
-    var pre = r.pre;
-    h += '<div class="panel"><p class="lead"><b>'+esc(pre.title)+'</b><br>'+esc(pre.intro)+'</p><dl>'+
-      pre.items.map(function(it){ return '<dt>'+esc(it[0])+'</dt><dd>'+esc(it[1])+'</dd>'; }).join('')+'</dl>'+
-      '<p class="note" style="margin-top:0"><button class="chip" data-act="preimg">原文の画像で確認</button></p></div>';
+    var pre = rd.pre;
+    if(pre.items){
+      h += '<div class="panel"><p class="lead"><b>'+esc(pre.title)+'</b><br>'+esc(pre.intro)+'</p><dl>'+
+        pre.items.map(function(x){ return '<dt>'+esc(x[0])+'</dt><dd>'+esc(x[1])+'</dd>'; }).join('')+'</dl>'+
+        (pre.img?'<p class="note" style="margin-top:0"><button class="chip" data-act="preimg">原文の画像で確認</button></p>':'')+'</div>';
+    } else if(pre.img){
+      h += '<div class="panel" style="padding-bottom:10px"><p class="lead" style="margin-bottom:8px"><b>'+esc(pre.title)+'</b>（'+esc(shortOf(it.r))+'）</p>'+figImg(pre.img,'飛行計画の条件')+
+        '<p class="note" style="margin-top:0"><button class="chip" data-act="preimg">拡大して見る</button></p></div>';
+    }
   }
   if(showImg) h += figImg(q.img, '問題の原文');
   h += '<div class="choices" role="group" aria-label="選択肢">';
   q.choices.forEach(function(ch,i){
     var cls = 'choice', no = i+1;
-    if(dn){ if(no===q.ans) cls += ' ok'; else if(no===dn.pick) cls += ' ng'; else cls += ' dim'; }
+    if(dn){ if(q.ans===0){ cls += (no===dn.pick ? ' ok' : ' dim'); } else if(no===q.ans || (q.alt && q.alt.indexOf(no)>=0)) cls += ' ok'; else if(no===dn.pick) cls += ' ng'; else cls += ' dim'; }
     h += '<button class="'+cls+'" data-act="choose" data-i="'+no+'"'+(dn?' disabled':'')+'><span class="n">'+no+'</span><span>'+fmt(ch)+'</span></button>';
   });
   h += '</div>';
   if(dn){
-    h += '<div class="result '+(dn.ok?'ok':'ng')+'">'+(dn.ok?'正解':'不正解　正解は ('+q.ans+')')+'</div>';
-    h += '<div class="explain"><h3>解説 <span class="pill">AI作成</span> <span class="pill'+(q.conf==='h'?'':' warn')+'">'+(q.conf==='h'?'確度 高':'確度 中・要確認')+'</span></h3>'+
+    h += '<div class="result '+(dn.ok?'ok':'ng')+'">'+(dn.ok?(q.ans===0?'正解（この問題は全員正解の扱い）':'正解'):'不正解　正解は ('+ansText(q)+')')+'</div>';
+    var cf = q.conf==='h' ? '確度 高' : (q.conf==='l' ? '確度 低・要確認' : '確度 中・要確認');
+    h += '<div class="explain"><h3>解説 <span class="pill">AI作成</span> <span class="pill'+(q.conf==='h'?'':' warn')+'">'+cf+'</span></h3>'+
       q.exp.split('\n').map(function(l){return '<p>'+fmt(l)+'</p>';}).join('')+
       '<p class="disc">正解は国土交通省の公表解答によります。解説はAIが作成した参考情報で、法規・数値は最新の資料で確認してください。</p></div>';
   }
@@ -438,15 +495,15 @@ function resultView(){
   var se = S.sess, n = se.list.length, ok = 0, ans = 0;
   se.list.forEach(function(e,i){ var d = se.done[i]; if(d){ ans++; if(d.ok) ok++; } });
   var p = pct(ok, ans), passed = p>=70;
-  var title = se.sid ? subjById(se.sid).name : '全科目';
+  var title = se.sid ? (SN[se.sid]||se.sid) : '全科目';
   var h = '<div class="eyebrow">Result</div><h1>'+esc(title)+'・'+KIND[se.kind]+'</h1>';
   h += '<div class="score"><b>'+ok+'</b><span>/ '+ans+(ans<n?'（未回答 '+(n-ans)+'）':'')+'</span></div>';
   h += '<p><span class="verdict '+(passed?'pass':'fail')+'">'+(ans?p+'%　'+(passed?'合格ライン（70%）以上':'合格ライン（70%）未満'):'回答なし')+'</span></p>';
   h += '<div class="rows">';
   se.list.forEach(function(e,i){
-    var d = se.done[i], q = qOf(e.sid,e.no), s = subjById(e.sid);
-    h += '<div class="row"><span class="m '+(d?(d.ok?'ok':'ng'):'sk')+'">'+(d?(d.ok?'○':'×'):'–')+'</span><span class="t">'+esc(s.name)+' 問'+e.no+'　'+esc(q.stem[0])+'</span>'+
-         '<span class="k">'+(d&&!d.ok?'正解 ('+q.ans+')':'')+'</span></div>';
+    var d = se.done[i], x = QS(e);
+    h += '<div class="row"><span class="m '+(d?(d.ok?'ok':'ng'):'sk')+'">'+(d?(d.ok?'○':'×'):'–')+'</span><span class="t">'+esc(x.s.name)+' '+esc(shortOf(e.r))+' 問'+e.no+'　'+esc(x.q.stem[0])+'</span>'+
+         '<span class="k">'+(d&&!d.ok?'正解 ('+ansText(x.q)+')':'')+'</span></div>';
   });
   h += '</div>';
   var wrong = se.list.filter(function(e,i){ return se.done[i] && !se.done[i].ok; }).length;
@@ -457,7 +514,7 @@ function resultView(){
 }
 
 function viewerView(){
-  var v = S.viewer, r = R(), list = v.list;
+  var v = S.viewer, list = v.list;
   var h = '<div class="viewer" role="dialog" aria-modal="true" aria-label="添付資料"><header><div class="chips">'+
     list.map(function(a,i){ return '<button class="chip" data-act="vsel" data-i="'+i+'" aria-pressed="'+(i===v.i)+'">'+esc(a.name)+'</button>'; }).join('')+
     '</div><button class="chip" data-act="vzoom" aria-pressed="'+v.zoom+'">拡大</button><button class="chip" data-act="vclose">閉じる</button></header>'+
@@ -485,6 +542,23 @@ function toast(msg){
   document.body.appendChild(toastEl); clearTimeout(toastT); toastT = setTimeout(function(){ if(toastEl){toastEl.remove(); toastEl=null;} }, 2400);
 }
 
+/* ---------- round switching ---------- */
+function ensureLoaded(id, done){
+  var ready = id===ALLID ? INDEX.every(function(x){return ROUNDS[x.id];}) : !!ROUNDS[id];
+  if(ready){ done(true); return; }
+  S.loading = true; render();
+  (id===ALLID ? loadAll : function(cb){ loadRound(id, cb); })(function(ok){ S.loading = false; done(ok); });
+}
+function switchRound(id){
+  var prevR = S.round;
+  S.round = id;
+  ensureLoaded(id, function(ok){
+    if(!ok){ S.round = prevR; toast('読み込めませんでした。オフラインの場合は、一度オンラインで開いてください'); }
+    else { try{ localStorage.setItem('atpl-drill-round', S.round); }catch(x){} }
+    render();
+  });
+}
+
 /* ---------- events ---------- */
 document.addEventListener('click', function(e){
   var b = e.target.closest('[data-act]'); if(!b || b.disabled) return;
@@ -501,11 +575,11 @@ document.addEventListener('click', function(e){
     S.sess = {sid:se.sid, kind:'wrong', list:shuffle(list), idx:0, done:{}, id:Date.now()};
     S.screen='quiz'; S.showImg={}; S.preOpen=null; render(); window.scrollTo(0,0);
   }
-  else if(a==='img'){ var c=cur(), k=c.ref.sid+'-'+c.ref.no; var was=(k in S.showImg)?S.showImg[k]:!!AUTO_IMG[k]; S.showImg[k]=!was; render(); }
-  else if(a==='star'){ var c2=cur(); toggleStar(c2.ref.sid,c2.ref.no); render(); }
+  else if(a==='img'){ var c=cur(), k=c.ref.k; var was=(k in S.showImg)?S.showImg[k]:!!c.q.fig; S.showImg[k]=!was; render(); }
+  else if(a==='star'){ toggleStar(cur().ref); render(); }
   else if(a==='pre'){ var cu = S.preOpen===null ? (cur().ref.no===16) : S.preOpen; S.preOpen = !cu; render(); }
-  else if(a==='preimg'){ S.viewer = {list:[{name:'飛行計画の条件（原文）', img:R().pre.img}], i:0, zoom:false}; render(); }
-  else if(a==='att'){ S.viewer = {list:R().att, i:0, zoom:false}; render(); }
+  else if(a==='preimg'){ S.viewer = {list:[{name:'飛行計画の条件（原文）', img:ROUNDS[cur().ref.r].pre.img}], i:0, zoom:false}; render(); }
+  else if(a==='att'){ S.viewer = {list:ROUNDS[cur().ref.r].att, i:0, zoom:false}; render(); }
   else if(a==='vsel'){ S.viewer.i = parseInt(b.getAttribute('data-i'),10); render(); }
   else if(a==='vzoom'){ S.viewer.zoom = !S.viewer.zoom; render(); }
   else if(a==='vclose'){ S.viewer = null; render(); }
@@ -532,7 +606,7 @@ document.addEventListener('click', function(e){
   }
 });
 document.addEventListener('change', function(e){
-  if(e.target && e.target.id==='roundSel'){ S.round = e.target.value; render(); }
+  if(e.target && e.target.id==='roundSel'){ switchRound(e.target.value); }
 });
 document.addEventListener('keydown', function(e){
   if(S.screen!=='quiz' || S.viewer) return;
@@ -545,7 +619,15 @@ document.addEventListener('keydown', function(e){
   else if(e.key==='ArrowLeft'){ prev(); }
 });
 
-render();
+(function boot(){
+  var saved = null; try{ saved = localStorage.getItem('atpl-drill-round'); }catch(x){}
+  if(saved && (saved===ALLID || INDEX.some(function(x){return x.id===saved;}))) S.round = saved;
+  ensureLoaded(S.round, function(ok){
+    if(!ok && S.round!==INDEX[0].id){ S.round = INDEX[0].id; ensureLoaded(S.round, function(){ render(); }); return; }
+    if(!ok) toast('問題データを読み込めませんでした');
+    render();
+  });
+})();
 initStore();
 })();
 </script>

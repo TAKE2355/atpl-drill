@@ -1,8 +1,8 @@
 /* ATPL 過去問ドリル: オフライン用 Service Worker
    アプリの内容を更新したら VERSION を変えると、古いキャッシュが破棄されます。 */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = 'atpl-drill-' + VERSION;
-const FILES = ['./', 'index.html', 'data.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
+const FILES = ["./", "index.html", "data-index.js", "data-R5-07.js", "data-R5-05.js", "data-R5-03.js", "data-R4-11.js", "data-R4-07.js", "data-R4-05.js", "data-R4-03.js", "data-R3-11.js", "data-R3-07.js", "data-R3-05.js", "data-R3-03.js", "data-R2-11.js", "data-R2-09.js", "data-R2-07.js", "data-R2-03.js", "data-R1-11.js", "data-R1-07.js", "data-R1-05.js", "data-H31-03.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES.map((f) => new Request(f, {cache: 'reload'})))).then(() => self.skipWaiting()));
